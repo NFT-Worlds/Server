@@ -1,0 +1,55 @@
+name: NFT-Worlds Builder 
+
+on:
+  push:
+    paths-ignore:
+      - '*.md'
+      - 'Jenkinsfile'
+  pull_request:
+    paths-ignore:
+      - '*.md'
+      - 'Jenkinsfile'
+        
+jobs:
+  validation:
+    name: "Gradle Wrapper Validation"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: gradle/wrapper-validation-action@v1
+      
+  build:
+    needs: validation
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '16' ]
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up JDK ${{ matrix.Java }}
+      uses: actions/setup-java@v2
+      with:
+        distribution: 'adopt'    
+        java-version: ${{ matrix.java }}
+        
+    - name: Configure Git
+      run: |
+         git config --global user.email "ci@github.com"
+         git config --global user.name "Github CI"
+         git config --global gc.auto 0
+        
+    - name: Build NFT-Worlds Server
+      run: |
+        ./gradlew build
+        
+    - name: Rename NFT-Worlds Server jar 
+      run:  cp -v "build/libs/NFT-Worlds-${{ steps.mcver.outputs.mcver }}-R0.1-SNAPSHOT.jar" "NFT-Worlds-${{ steps.mcver.outputs.mcver }}-wenmint.jar"
+      
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: NFT-Worlds-${{ matrix.java }}
+        path: NFT-Worlds-${{ steps.mcver.outputs.mcver }}-wenmint.jar
+      
+
